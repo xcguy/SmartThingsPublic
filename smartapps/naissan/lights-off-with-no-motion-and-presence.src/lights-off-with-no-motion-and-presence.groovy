@@ -53,28 +53,36 @@ def presenceHandler(evt) {
 }
 
 def isActivePresence() {
-	// check all the presence sensors, make sure none are present
+	// check all the presence sensors to find none are present
 	def noPresence = presenceSensors.find{it.currentPresence == "present"} == null
 	!noPresence		
 }
 
+
+def isLightsOn() {
+	// check all the switches to find none are on
+	def noLights = switches.find{it.currentSwitch == "on"} == null
+    !noLights
+}
+
 def scheduleCheck() {
 	log.debug "scheduled check"
-	def motionState = motionSensor.currentState("motion")
-    if (motionState.value == "inactive") {
-        def elapsed = now() - motionState.rawDateCreated.time
-    	def threshold = 1000 * 60 * delayMins - 1000
-    	if (elapsed >= threshold) {
-        	if (!isActivePresence()) {
-            	log.debug "Motion has stayed inactive since last check ($elapsed ms) and no presence:  turning lights off"
-            	switches.off()
-            } else {
-            	log.debug "Presence is active: do nothing"
-            }
-    	} else {
-        	log.debug "Motion has not stayed inactive long enough since last check ($elapsed ms): do nothing"
-        }
-    } else {
-    	log.debug "Motion is active: do nothing"
+    if (isLightsOn()) {
+		def motionState = motionSensor.currentState("motion")
+    	if (motionState.value == "inactive") {
+        	def elapsed = now() - motionState.rawDateCreated.time
+    		def threshold = 1000 * 60 * delayMins - 1000
+    		if (elapsed >= threshold) {
+	        	if (!isActivePresence()) {
+	            	log.debug "Motion has stayed inactive since last check ($elapsed ms) and no presence:  turning lights off"
+	            	switches.off()
+	            } else 
+	            	log.debug "Presence is active: do nothing"
+	    	} else 
+	        	log.debug "Motion has not stayed inactive long enough since last check ($elapsed ms): do nothing"
+    	} else 
+	    	log.debug "Motion is active: do nothing"
     }
+	else 
+   	   	log.debug "No lights on: do nothing"
 }

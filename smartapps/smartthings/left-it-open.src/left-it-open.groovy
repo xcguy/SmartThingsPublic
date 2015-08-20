@@ -65,7 +65,7 @@ def doorOpen(evt)
 	def t0 = now()
 	def delay = (openThreshold != null && openThreshold != "") ? openThreshold * 60 : 600
 	runIn(delay, doorOpenTooLong, [overwrite: false])
-	log.debug "scheduled doorOpenTooLong in ${now() - t0} msec"
+	log.debug "scheduled doorOpenTooLong in ${delay} seconds"
 }
 
 def doorClosed(evt)
@@ -79,7 +79,7 @@ def doorOpenTooLong() {
 
 	if (contactState.value == "open") {
 		def elapsed = now() - contactState.rawDateCreated.time
-		def threshold = ((openThreshold != null && openThreshold != "") ? openThreshold * 60000 : 60000) - 1000
+		def threshold = ((openThreshold != null && openThreshold != "") ? openThreshold * 60000 : 600000) - 1000
 		if (elapsed >= threshold) {
 			log.debug "Contact has stayed open long enough since last check ($elapsed ms):  calling sendMessage()"
 			sendMessage()
@@ -94,7 +94,7 @@ def doorOpenTooLong() {
 
 void sendMessage()
 {
-	def minutes = (openThreshold != null && openThreshold != "") ? openThreshold : 10
+	def minutes = Math.round((now() - contact.currentState("contact").rawDateCreated.time) / 60000).toString()
 	def msg = "${contact.displayName} has been left open for ${minutes} minutes."
 	log.info msg
     if (location.contactBookEnabled) {

@@ -21,6 +21,7 @@ metadata {
 		capability "Illuminance Measurement"
 		capability "Temperature Measurement"
 		capability "Relative Humidity Measurement"
+ 		capability "Polling"       
 
 		attribute "localSunrise", "string"
 		attribute "localSunset", "string"
@@ -36,6 +37,7 @@ metadata {
 		attribute "alertKeys", "string"
 		attribute "sunriseDate", "string"
 		attribute "sunsetDate", "string"
+        attribute "dewpoint", "string"
 
 		command "refresh"
 	}
@@ -55,6 +57,18 @@ metadata {
 					[value: 84, color: "#f1d801"],
 					[value: 95, color: "#d04e00"],
 					[value: 96, color: "#bc2323"]
+				]
+		}
+
+		valueTile("dewpoint", "device.dewpoint") {
+			state "default", label:'${currentValue}°',
+				backgroundColors:[
+					[value: 55, color: "#0080ff"],
+					[value: 60, color: "#00ffbf"],
+					[value: 65, color: "#80ff00"],
+					[value: 70, color: "#ffff00"],
+					[value: 75, color: "#ff8000"],
+					[value: 76, color: "#ff4000"]
 				]
 		}
 
@@ -148,7 +162,7 @@ metadata {
 		}
 
 		main(["temperature", "weatherIcon","feelsLike"])
-		details(["temperature", "humidity", "weatherIcon","feelsLike","wind","weather", "city","percentPrecip", "refresh","alert","rise","set","light"])}
+		details(["temperature", "dewpoint", "humidity", "weatherIcon","feelsLike","wind","weather","city","percentPrecip","alert","rise","set","light","refresh"])}
 }
 
 // parse events into attributes
@@ -175,9 +189,11 @@ def poll() {
 
 		if(getTemperatureScale() == "C") {
 			send(name: "temperature", value: Math.round(obs.temp_c), unit: "C")
+   			send(name: "dewpoint", value: Math.round(obs.dewpoint_c), unit: "C")
 			send(name: "feelsLike", value: Math.round(obs.feelslike_c as Double), unit: "C")
 		} else {
 			send(name: "temperature", value: Math.round(obs.temp_f), unit: "F")
+   			send(name: "dewpoint", value: Math.round(obs.dewpoint_f), unit: "F")
 			send(name: "feelsLike", value: Math.round(obs.feelslike_f as Double), unit: "F")
 		}
 		

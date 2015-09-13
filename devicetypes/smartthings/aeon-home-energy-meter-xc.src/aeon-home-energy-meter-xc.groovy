@@ -91,13 +91,15 @@ def parse(String description) {
 def zwaveEvent(physicalgraph.zwave.commands.meterv1.MeterReport cmd) {
 	log.debug "zwaveEvent ${cmd}"
 	if (cmd.scale == 0) {
-    	def valAvg = cmd.scaledMeterValue / getEnergyDays() as Float
+    	def valEnergy = getEnergyUsed(cmd.scaledMeterValue)
+    	def valAvg = valEnergy / getEnergyDays() as Float
         valAvg = valAvg.round(2)
         sendEvent(name: "energyAvg", value: valAvg, unit: "kWh")
-    	def valCost = cmd.scaledMeterValue * (kWhCost as Float) as Float
+    	def valCost = valEnergy * (kWhCost as Float) as Float
         valCost = String.format("%.2f", valCost.round(2))
-        sendEvent(name: "energyCost", value: valCost, unit: "\$")        
-		[name: "energy", value: cmd.scaledMeterValue, unit: "kWh"]
+        sendEvent(name: "energyCost", value: valCost, unit: "\$")    
+        valEnergy = valEnergy.round(3)
+		[name: "energy", value: valEnergy, unit: "kWh"]
 	} else if (cmd.scale == 1) {
 		[name: "energy", value: cmd.scaledMeterValue, unit: "kVAh"]
 	}
@@ -127,8 +129,13 @@ def refresh() {
 }
 
 def resetEnergy() {
-	// No V1 available
-    log.info "Energy used last month - Total "+device.currentValue("energy")+" kWH, Daily average "+device.currentValue("energyAvg")+" kWH"
+
+	def energyUsed = Float.parseFloat(device.currentValue("energy"))
+    def energyDailyAvg = energyUsed / getEnergyDays()
+   	log.info "Energy used last month - Total "+String.format("%.1f", energyUsed)+" kWH, Daily average "+String.format("%.2f", energyDailyAvg)+" kWH"
+    // save the energy total for start of this period
+    state.lastEnergy = String.format("%.3f", (Float.parseFloat(state.lastEnergy) + energyUsed))
+	// Not V1 available
 	return [
 		zwave.meterV2.meterReset().format(),
 		zwave.meterV2.meterGet(scale: 0).format()
@@ -136,27 +143,38 @@ def resetEnergy() {
 }
 
 private resetPower() {
-    log.info "Power used for the day - low: "+device.currentValue("powerLow")+", high: "+device.currentValue("powerHigh")
+    log.info "Power levels for yesterday - Low: "+device.currentValue("powerLow")+", High: "+device.currentValue("powerHigh")
 	sendEvent(name: "powerLow", value: 99999, unit: "W")
     sendEvent(name: "powerHigh", value: 0, unit: "W")
 }
 
 
 private checkForReset() {
-	TimeZone.setDefault(TimeZone.getTimeZone("CST"))
+	TimeZone.setDefault(location.timeZone)
     def powerState = device.currentState("powerHigh")
 	def curtime = new Date()
     if (powerState.rawDateCreated[Calendar.DATE] != curtime[Calendar.DATE]) {
-    	if (powerState.rawDateCreated[Calendar.MONTH] != curtime[Calendar.MONTH]) {  // month changed too
+    	if (powerState.rawDateCreated[Calendar.MONTH] != curtime[Calendar.MONTH]) {
+        	// month changed
 	    	log.debug "Resetting Energy"
 			resetEnergy()
         }
+        // date changed
     	log.debug "Resetting Power"
         resetPower()
     }
 }
 
+private getEnergyUsed(Float totalEnergy) {
+	if (state.lastEnergy == null) {
+    	state.lastEnergy = "5154.340"  // initial with start of the month energy
+    }
+    Float energyUsed = totalEnergy - Float.parseFloat(state.lastEnergy)
+    return energyUsed
+}
+
 private getEnergyDays() {
+	TimeZone.setDefault(location.timeZone)
 	def energyState = device.currentState("energy")
 	def energyStart = Date.parse("yyyy-MM-dd", ""+energyState.rawDateCreated[Calendar.YEAR]+"-"+(energyState.rawDateCreated[Calendar.MONTH]+1)+"-01")
     Float daysDiff = (energyState.rawDateCreated.getTime() - energyStart.getTime())/86400000.0

@@ -10,8 +10,8 @@ definition(
     author:      "Bruce Adelsman",
     description: "Sets the thermostat to away or present based on hub mode.",
     category:    "Green Living",
-    iconUrl:     "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience.png",
-    iconX2Url:   "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience%402x.png"
+    iconUrl:     "https://s3.amazonaws.com/smartapp-icons/Partner/nest.png",
+    iconX2Url:   "https://s3.amazonaws.com/smartapp-icons/Partner/nest@2x.png"
 )
 
 preferences {

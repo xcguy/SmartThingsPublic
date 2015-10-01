@@ -51,6 +51,7 @@ def mainPage() {
 				ifSet "departurePresence", "capability.presenceSensor", title: "Departure Of", required: false, multiple: true
 				ifSet "smoke", "capability.smokeDetector", title: "Smoke Detected", required: false, multiple: true
 				ifSet "water", "capability.waterSensor", title: "Water Sensor Wet", required: false, multiple: true
+				ifSet "mailbox", "device.mailboxSensor", title: "Mailbox delivery", required: false, multiple: false                
 				ifSet "button1", "capability.button", title: "Button Press", required:false, multiple:true //remove from production
 				ifSet "triggerModes", "mode", title: "System Changes Mode", required: false, multiple: true
 				ifSet "timeOfDay", "time", title: "At a Scheduled Time", required: false
@@ -70,6 +71,7 @@ def mainPage() {
 			ifUnset "departurePresence", "capability.presenceSensor", title: "Departure Of", required: false, multiple: true
 			ifUnset "smoke", "capability.smokeDetector", title: "Smoke Detected", required: false, multiple: true
 			ifUnset "water", "capability.waterSensor", title: "Water Sensor Wet", required: false, multiple: true
+			ifUnset "mailbox", "device.mailboxSensor", title: "Mailbox delivery", required: false, multiple: false
 			ifUnset "button1", "capability.button", title: "Button Press", required:false, multiple:true //remove from production
 			ifUnset "triggerModes", "mode", title: "System Changes Mode", description: "Select mode(s)", required: false, multiple: true
 			ifUnset "timeOfDay", "time", title: "At a Scheduled Time", required: false
@@ -171,7 +173,7 @@ private saveSelectedSong() {
 }
 
 private anythingSet() {
-	for (name in ["motion","contact","contactClosed","acceleration","mySwitch","mySwitchOff","arrivalPresence","departurePresence","smoke","water","button1","timeOfDay","triggerModes","timeOfDay"]) {
+	for (name in ["motion","contact","contactClosed","acceleration","mySwitch","mySwitchOff","arrivalPresence","departurePresence","smoke","water","mailbox","button1","timeOfDay","triggerModes","timeOfDay"]) {
 		if (settings[name]) {
 			return true
 		}
@@ -216,6 +218,7 @@ def subscribeToEvents() {
 	subscribe(smoke, "smoke.detected", eventHandler)
 	subscribe(smoke, "smoke.tested", eventHandler)
 	subscribe(smoke, "carbonMonoxide.detected", eventHandler)
+    subscribe(mailbox, "mailbox.full", eventHandler)
 	subscribe(water, "water.wet", eventHandler)
 	subscribe(button1, "button.pushed", eventHandler)
 
@@ -232,6 +235,8 @@ def subscribeToEvents() {
 	}
 
 	loadText()
+    
+    log.debug "state.sound : $state.sound"
 }
 
 def eventHandler(evt) {
@@ -418,3 +423,4 @@ private loadText() {
 			break;
 	}
 }
+

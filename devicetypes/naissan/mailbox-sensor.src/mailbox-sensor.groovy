@@ -13,7 +13,7 @@
  *  Mailbox Sensor
  *
  *  Author: Bruce Adelsman
- *  Date: 2015-09-11
+ *  Date: 2015-10-12
  */
 
 metadata {
@@ -27,6 +27,7 @@ metadata {
         
         command "setFull"
         command "setEmpty"
+        command "reset"
 
 		fingerprint deviceId: "0x2001", inClusters: "0x30,0x80,0x84,0x85,0x86,0x72"
 		fingerprint deviceId: "0x07", inClusters: "0x30"
@@ -65,7 +66,7 @@ metadata {
 			state "closed", label: '${name}', icon: "st.contact.contact.closed", backgroundColor: "#79b821"
 		}
         standardTile("reset", "device.contact", width: 1, height: 1, canChangeIcon: false, canChangeBackground: false, decoration: "flat") {
-			state "default", label: "Reset", icon: "", action: "setEmpty"
+			state "default", label: "Reset", icon: "", action: "reset"
         }               
 		valueTile("battery", "device.battery", inactiveLabel: false, decoration: "flat") {
 			state "battery", label:'${currentValue}% battery', unit:""
@@ -112,6 +113,11 @@ def setEmpty() {
 	sendEvent(name: "mailbox", value: "empty")
 }
 
+def reset() {
+	setEmpty()
+    state.lastDeliveryDay = 0
+}
+
 def isEmpty() {
 	return device.currentValue("mailbox") == "empty"
 }
@@ -120,7 +126,12 @@ def isFull() {
 	return device.currentValue("mailbox") == "full"
 }
 
+def install() {
+	state.lastDeliveryDay = 0
+}
+
 def updated() {
+	state.lastDeliveryDay = state.lastDeliveryDay ?: 0
 	def cmds = []
 	if (!state.MSR) {
 		cmds = [
@@ -146,16 +157,16 @@ def configure() {
 def processDoorClose() {
 	log.debug "Processing mailbox door closure (detection: $fullDetect)"
 	TimeZone.setDefault(location.timeZone)
-    def mailboxState = device.currentState("mailbox")
     def curtime = new Date()
     // if first access on the day or full detection is toggle and mailbox is empty
-    if (mailboxState.rawDateCreated[Calendar.DATE] != curtime[Calendar.DATE] || (fullDetect == "toggle" && isEmpty())) {
+    if (state.lastDeliveryDay != curtime[Calendar.DATE] || (fullDetect == "toggle" && isEmpty())) {
  		setFull()
     } 
     else {
     // else if (isFull()) {
  		setEmpty()
     }
+    state.lastDeliveryDay = curtime[Calendar.DATE]
 }
 
 def sensorValueEvent(value) {

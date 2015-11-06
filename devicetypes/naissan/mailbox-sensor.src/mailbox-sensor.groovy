@@ -13,7 +13,7 @@
  *  Mailbox Sensor
  *
  *  Author: Bruce Adelsman
- *  Date: 2015-10-12
+ *  Date: 2015-10-30
  */
 
 metadata {
@@ -29,9 +29,6 @@ metadata {
         command "setEmpty"
         command "reset"
 
-		fingerprint deviceId: "0x2001", inClusters: "0x30,0x80,0x84,0x85,0x86,0x72"
-		fingerprint deviceId: "0x07", inClusters: "0x30"
-		fingerprint deviceId: "0x0701", inClusters: "0x5E,0x86,0x72,0x98", outClusters: "0x5A,0x82"
 	}
     
     preferences {
@@ -156,17 +153,16 @@ def configure() {
 
 def processDoorClose() {
 	log.debug "Processing mailbox door closure (detection: $fullDetect)"
-	TimeZone.setDefault(location.timeZone)
-    def curtime = new Date()
+    def currentDay = new Date().format("d", location.timeZone)
     // if first access on the day or full detection is toggle and mailbox is empty
-    if (state.lastDeliveryDay != curtime[Calendar.DATE] || (fullDetect == "toggle" && isEmpty())) {
+    if (state.lastDeliveryDay != currentDay || (fullDetect == "toggle" && isEmpty())) {
  		setFull()
     } 
     else {
     // else if (isFull()) {
  		setEmpty()
     }
-    state.lastDeliveryDay = curtime[Calendar.DATE]
+    state.lastDeliveryDay = currentDay
 }
 
 def sensorValueEvent(value) {

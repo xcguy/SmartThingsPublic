@@ -27,6 +27,8 @@ preferences {
  	}   
 }
 
+import java.text.SimpleDateFormat
+
 def installed() {
 	log.debug "Installed with settings: ${settings}"
 
@@ -45,15 +47,16 @@ def initialize() {
 	// monitor the mailbox
     subscribe(sensor, "mailbox", mailboxAccessed)
 
-	TimeZone.setDefault(location.timeZone)
-	def hourString = "8 pm"
-    if (reminderHour) {
-    	hourString = reminderHour
-    }
-   	Date reminderTime = new Date().parse("h a", hourString)
-    log.debug "Mail reminder set for $reminderTime"
+
+	def hourString = reminderHour ?: "8 pm"
+    log.debug "Mail reminder set for $hourString"
+    def cal = new GregorianCalendar()
+	SimpleDateFormat sdf = new SimpleDateFormat("h a")
+	sdf.setTimeZone(location.timeZone)
+	cal.setTime(sdf.parse(hourString))
+    log.debug "Mail reminder scheduled for ${cal.time}"
     // schedule reminder check for each day
-    schedule(reminderTime, forgottenMail)
+    schedule(cal.time, forgottenMail)
 }
 
 def mailboxAccessed(evt) {

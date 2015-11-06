@@ -3,12 +3,13 @@
  *
  *  Author: Bruce Adelsman
  *
- *  Date: 2015-04-02
+ *  Date: 2015-10-12
  */
 metadata {
 	definition (name: "Presence Toggle", namespace: "naissan", author: "Bruce Adelsman", oauth: true) {
 		capability "Actuator"
   		capability "Presence Sensor"
+   		capability "Motion Sensor"
 
         attribute "wakeTile", "string"
         
@@ -23,6 +24,7 @@ metadata {
        		options: [
             	"cellphone",
                 "computer",
+                "power",
                 "other"
                 ],
         	defaultValue: "computer", required: true
@@ -45,6 +47,10 @@ metadata {
 			state "not present", labelIcon:"st.presence.tile.not-present", backgroundColor:"#ffffff", defaultState: true
   			state "present", labelIcon:"st.presence.tile.present", backgroundColor:"#53a7c0"
 		}
+		standardTile("motion", "device.motion", width: 1, height: 1) {
+			state "inactive", label:'no motion', icon:"st.motion.motion.inactive", backgroundColor:"#ffffff", defaultState: true
+			state "active", label:'motion', icon:"st.motion.motion.active", backgroundColor:"#53a7c0"
+		}
         standardTile("toggle", "device.presence", width: 1, height: 1, canChangeIcon: false, canChangeBackground: false, decoration: "flat") {
 			state "default", label: "Toggle", action: "toggle", icon: ""
         }
@@ -53,8 +59,8 @@ metadata {
 			state "disabled", label: "", action: "", icon: ""
 		}
 
-		main("presence")
-		details(["presence", "toggle", "wakeTile"])
+		main(["presence", "motion"])
+		details(["presence", "motion", "toggle", "wakeTile"])
 	}
 }
 
@@ -99,11 +105,13 @@ def initialize() {
 def active() {
 	log.debug "Active"
 	sendEvent(name: 'presence', value: 'present')
+   	sendEvent(name: 'motion', value: 'active')
 }
 
 def inactive() {
 	log.debug "Inactive"
 	sendEvent(name: 'presence', value: 'not present')
+   	sendEvent(name: 'motion', value: 'inactive')
 }
 
 def toggle() {

@@ -15,13 +15,15 @@
  */
 metadata {
 	definition (name: "Centralite Keypad", namespace: "mitchpond", author: "Mitch Pond") {
-		capability "Battery"
+	capability "Battery"
         capability "Configuration"
-		capability "Sensor"
+	capability "Sensor"
         capability "Temperature Measurement"
         capability "Refresh"
+        capability "Lock Codes"
         
         attribute "armMode", "String"
+        attribute "systemMode", "String"
         
         command "enrollResponse"
         command "setDisarmed"
@@ -39,7 +41,7 @@ metadata {
         valueTile("battery", "device.battery", decoration: "flat") {
 			state "battery", label:'${currentValue}% battery', unit:""
 		}
-        valueTile("temperature", "device.temperature", decoration: "flat") {
+        valueTile("temperature", "device.temperature") {
         	state "temperature", label: '${currentValue}°',
                 backgroundColors:[
                         [value: 31, color: "#153591"],
@@ -51,18 +53,23 @@ metadata {
                         [value: 96, color: "#bc2323"]
                     ]
         }
-        valueTile("armMode", "device.armMode", decoration: "flat") {
-        	state "armMode", label: '${currentValue}'
+        standardTile("armMode", "device.armMode") {
+ 	        state("armedAway", label:'Armed/Away', icon:"st.locks.lock.locked", backgroundColor:"#ff0000")            
+	        state("armedStay", label:'Armed/Stay', icon:"st.locks.lock.locked", backgroundColor:"#ffa81e")            
+	        state("armedNight", label:'Armed/Night', icon:"st.locks.lock.locked", backgroundColor:"#ffa81e")            
+	        state("disarmed", label:'Disarmed', icon:"st.locks.lock.unlocked", backgroundColor:"#79b821")            
         }
+        valueTile("systemMode", "device.systemMode", decoration: "flat") {
+			state "default", label:'${currentValue}'
+		}
         standardTile("refresh", "device.refresh", inactiveLabel: false, decoration: "flat", width: 1, height: 1) {
-        	state "default", action:"refresh.refresh", icon:"st.secondary.refresh"
+        	state("default", action:"refresh.refresh", icon:"st.secondary.refresh")
     	}
         standardTile("configure", "device.configure", inactiveLabel: false, decoration: "flat", width: 1, height: 1) {
-        	state "default", action:"configuration.configure", icon:"st.secondary.configure"
+        	state("default", action:"configuration.configure", icon:"st.secondary.configure")
     	}
-        main ("battery")
-        //TODO: armMode is in here for debug purposes. Remove later.
-        details (["temperature","battery","armMode","configure","refresh"])
+        main (["battery", "temperature", "armMode"])
+        details (["temperature","battery","armMode","systemMode", "configure","refresh"])
 	}
 }
 
@@ -71,6 +78,9 @@ def parse(String description) {
 	log.debug "Parsing '${description}'";
     def results = [];
     
+    if (location.mode != systemMode) {
+    	sendEvent(name: 'systemMode', value: location.mode)
+    }
 	//------Miscellaneous Zigbee message------//
 	if (description?.startsWith('catchall:')) {
     	//log.debug zigbee.parse(description);

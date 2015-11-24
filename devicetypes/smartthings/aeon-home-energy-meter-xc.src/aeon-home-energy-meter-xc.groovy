@@ -17,6 +17,10 @@ metadata {
         attribute "powerHigh", "number"      
         attribute "energyCost", "number"
         attribute "energyAvg", "number"
+        
+        // state.startEnergy - the total energy at the start of the reporting (usually start of month)
+        // start.startEnergyDate - date of the start of the reporting (usually start of the month)
+        // start.currentPowerDate - date for tracking current high/low power usage (daily)
 
 		fingerprint deviceId: "0x2101", inClusters: " 0x70,0x31,0x72,0x86,0x32,0x80,0x85,0x60"
 	}
@@ -64,19 +68,23 @@ metadata {
 		details(["power", "powerLow", "powerHigh", "energy", "energyCost", "energyAvg", "refresh", "configure"])
 	}
     preferences {
-        input "kWhCost", "string", title: "\$/kWh (0.12)", defaultValue: "0.12" as String
+        input "kWhCost", "string", title: "\$/kWh (0.12)", description: "Cost of electricy", defaultValue: "0.12" as String
     }
 }
 
+import java.text.SimpleDateFormat
+
 def installed() {
 	log.debug "Install"
-    resetPower()
+
 }
 
 def updated() {
 	log.debug "Updated"
-    resetPower()
+
 }
+
+
 
 def parse(String description) {
 	def result = null
@@ -90,8 +98,11 @@ def parse(String description) {
 
 def zwaveEvent(physicalgraph.zwave.commands.meterv1.MeterReport cmd) {
 	log.debug "zwaveEvent ${cmd}"
+	log.debug "state - energy ${state.startEnergy} ${state.startEnergyDate}, power ${state.currentPowerDate}"
 	if (cmd.scale == 0) {
-    	def valEnergy = getEnergyUsed(cmd.scaledMeterValue)
+    	def valTotalEnergy = cmd.scaledMeterValue as Float
+        checkForEnergyReset(valTotalEnergy)
+    	def valEnergy = getEnergyUsed(valTotalEnergy)
     	def valAvg = valEnergy / getEnergyDays() as Float
         valAvg = valAvg.round(2)
         sendEvent(name: "energyAvg", value: valAvg, unit: "kWh")
@@ -104,7 +115,7 @@ def zwaveEvent(physicalgraph.zwave.commands.meterv1.MeterReport cmd) {
 		[name: "energy", value: cmd.scaledMeterValue, unit: "kVAh"]
 	}
 	else {
-    	checkForReset()
+    	checkForPowerReset()
     	def value =  Math.round(cmd.scaledMeterValue) as Integer
     	if (value < (device.currentValue("powerLow") as Integer)) {
             sendEvent(name: "powerLow", value: value, unit: "W")
@@ -128,13 +139,16 @@ def refresh() {
 	])
 }
 
-def resetEnergy() {
-
-	def energyUsed = Float.parseFloat(device.currentValue("energy"))
-    def energyDailyAvg = energyUsed / getEnergyDays()
-   	log.info "Energy used last month - Total "+String.format("%.1f", energyUsed)+" kWH, Daily average "+String.format("%.2f", energyDailyAvg)+" kWH"
-    // save the energy total for start of this period
-    state.lastEnergy = String.format("%.3f", (Float.parseFloat(state.lastEnergy) + energyUsed))
+def resetEnergy(Float val) {
+	log.debug "Resetting Energy"
+	if (state.startEnergy != null) {
+		def energyUsed = device.currentValue("energy") as double
+    	def energyDailyAvg = energyUsed / getEnergyDays() as float
+   		log.info "Energy used last month - Total "+String.format("%.1f", energyUsed)+" kWH, Daily average "+String.format("%.2f", energyDailyAvg)+" kWH"
+    }
+    // start new reporting period and save total energy
+    state.startEnergyDate = getISOString(new Date())
+    state.startEnergy = val
 	// Not V1 available
 	return [
 		zwave.meterV2.meterReset().format(),
@@ -143,42 +157,55 @@ def resetEnergy() {
 }
 
 private resetPower() {
-    log.info "Power levels for yesterday - Low: "+device.currentValue("powerLow")+", High: "+device.currentValue("powerHigh")
+    log.debug "Resetting Power"
+	if (device.currentValue("powerLow") != null && (device.currentValue("powerLow") as float) > 1) {
+    	log.info "Power levels for yesterday - Low: "+device.currentValue("powerLow")+", High: "+device.currentValue("powerHigh")
+    }
+	state.currentPowerDate = getISOString(new Date())
 	sendEvent(name: "powerLow", value: 99999, unit: "W")
     sendEvent(name: "powerHigh", value: 0, unit: "W")
 }
 
 
-private checkForReset() {
-	TimeZone.setDefault(location.timeZone)
-    def powerState = device.currentState("powerHigh")
+private checkForPowerReset() {
+    def currentPowerDate = getISODate(state.currentPowerDate)
 	def curtime = new Date()
-    if (powerState.rawDateCreated[Calendar.DATE] != curtime[Calendar.DATE]) {
-    	if (powerState.rawDateCreated[Calendar.MONTH] != curtime[Calendar.MONTH]) {
-        	// month changed
-	    	log.debug "Resetting Energy"
-			resetEnergy()
-        }
+    if (currentPowerDate == null || currentPowerDate.format("d", location.timeZone) != curtime.format("d", location.timeZone)) {
         // date changed
-    	log.debug "Resetting Power"
         resetPower()
     }
 }
 
-private getEnergyUsed(Float totalEnergy) {
-	if (state.lastEnergy == null) {
-    	state.lastEnergy = "5154.340"  // initial with start of the month energy
+private checkForEnergyReset(Float val) {
+    def startEnergyDate = getISODate(state.startEnergyDate)
+    def curtime = new Date()
+    if (state.startEnergy == null || startEnergyDate == null || startEnergyDate.format("M", location.timeZone) != curtime.format("M", location.timeZone)) {
+        // month changed
+		resetEnergy(val)
     }
-    Float energyUsed = totalEnergy - Float.parseFloat(state.lastEnergy)
+}
+
+private getEnergyUsed(Float totalEnergy) {
+    // log.debug "getEnergyUsed - total: $totalEnergy,  start: ${state.startEnergy}"
+    Float energyUsed = totalEnergy - (state.startEnergy as float)
     return energyUsed
 }
 
 private getEnergyDays() {
-	TimeZone.setDefault(location.timeZone)
-	def energyState = device.currentState("energy")
-	def energyStart = Date.parse("yyyy-MM-dd", ""+energyState.rawDateCreated[Calendar.YEAR]+"-"+(energyState.rawDateCreated[Calendar.MONTH]+1)+"-01")
-    Float daysDiff = (energyState.rawDateCreated.getTime() - energyStart.getTime())/86400000.0
+    def startEnergyDate = getISODate(state.startEnergyDate)
+    // log.debug "getEnergyDays - start: ${startEnergyDate}"
+    Float daysDiff = (new Date().getTime() - startEnergyDate.getTime())/86400000.0
     return daysDiff
+}
+
+private getISODate(String t) {
+    def sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ")
+    return(t == null ? null : sdf.parse(t))
+}
+
+private getISOString(Date t) {
+    def sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ")
+    return(t == null ? null : sdf.format(t))
 }
 
 def configure() {

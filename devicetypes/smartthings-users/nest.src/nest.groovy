@@ -16,8 +16,6 @@
  *         Temperature Measurement
  *         Presence Sensor
  *         Sensor
- *     Custom Attributes:
- *         temperatureUnit
  *     Custom Commands:
  *         away
  *         present
@@ -26,8 +24,9 @@
  *         heatingSetpointDown
  *         coolingSetpointUp
  *         coolingSetpointDown
- *         setFahrenheit
- *         setCelsius
+ *         setHumiditySetpoint
+ *         humiditySetpointUp
+ *         humiditySetpointDown
  *
  * 2) If you want to switch from slider controls to buttons, comment out the slider details line and uncomment the button details line.
  *
@@ -88,10 +87,11 @@ metadata {
 		command "heatingSetpointDown"
 		command "coolingSetpointUp"
 		command "coolingSetpointDown"
-		command "setFahrenheit"
-		command "setCelsius"
+		command "setHumiditySetpoint"
+		command "humiditySetpointUp"
+		command "humiditySetpointDown"
 
-		attribute "temperatureUnit", "string"
+		attribute "humiditySetpoint", "string"
 	}
 
 	simulator {
@@ -153,6 +153,10 @@ metadata {
 			state "default", label:'${currentValue}%', unit:"Humidity"
 		}
 
+		valueTile("humiditySetpoint", "device.humiditySetpoint", inactiveLabel: false) {
+			state "default", icon: "st.Weather.weather12", label:'${currentValue}%', unit:"Humidity", backgroundColor:"#308014"
+		}
+
 		standardTile("presence", "device.presence", inactiveLabel: false, decoration: "flat") {
 			state "present", label:'${name}', action:"away", icon: "st.Home.home2"
 			state "not present", label:'away', action:"present", icon: "st.Transportation.transportation5"
@@ -162,16 +166,16 @@ metadata {
 			state "default", action:"polling.poll", icon:"st.secondary.refresh"
 		}
 
-		standardTile("temperatureUnit", "device.temperatureUnit", canChangeIcon: false) {
-			state "fahrenheit",  label: "°F", icon: "st.alarm.temperature.normal", action:"setCelsius"
-			state "celsius", label: "°C", icon: "st.alarm.temperature.normal", action:"setFahrenheit"
-		}
-
-		controlTile("heatSliderControl", "device.heatingSetpoint", "slider", height: 1, width: 2, inactiveLabel: false) {
+		controlTile("heatSliderControl", "device.heatingSetpoint", "slider", height: 1, width: 2, inactiveLabel: false, range:"(9..89)") {
 			state "setHeatingSetpoint", label:'Set temperature to', action:"thermostat.setHeatingSetpoint"
 		}
-		controlTile("coolSliderControl", "device.coolingSetpoint", "slider", height: 1, width: 2, inactiveLabel: false) {
+
+		controlTile("coolSliderControl", "device.coolingSetpoint", "slider", height: 1, width: 2, inactiveLabel: false, range:"(9..89)") {
 			state "setCoolingSetpoint", label:'Set temperature to', action:"thermostat.setCoolingSetpoint"
+		}
+
+		controlTile("humiditySliderControl", "device.humiditySetpoint", "slider", height: 1, width: 2, inactiveLabel: false, range:"(0..60)") {
+			state "setHumiditySetpoint", label:'Set humidity to', action:"thermostat.setHumiditySetpoint"
 		}
 
 		standardTile("heatingSetpointUp", "device.heatingSetpoint", canChangeIcon: false, inactiveLabel: false, decoration: "flat") {
@@ -189,6 +193,14 @@ metadata {
 		standardTile("coolingSetpointDown", "device.coolingSetpoint", canChangeIcon: false, inactiveLabel: false, decoration: "flat") {
 			state "coolingSetpointDown", label:'  ', action:"coolingSetpointDown", icon:"st.thermostat.thermostat-down", backgroundColor:"#1e9cbb"
 		}
+		
+		standardTile("humiditySetpointUp", "humiditySetpoint", canChangeIcon: false, inactiveLabel: false, decoration: "flat") {
+			state "humiditySetpointUp", label:'  ', action:"humiditySetpointUp", icon:"st.thermostat.thermostat-up", backgroundColor:"#1e9cbb"
+		}
+
+		standardTile("humiditySetpointDown", "device.humiditySetpoint", canChangeIcon: false, inactiveLabel: false, decoration: "flat") {
+			state "humiditySetpointDown", label:'  ', action:"humiditySetpointDown", icon:"st.thermostat.thermostat-down", backgroundColor:"#1e9cbb"
+		}
 
 		main(["temperature", "thermostatOperatingState", "humidity"])
 
@@ -197,8 +209,8 @@ metadata {
 		// To expose buttons, comment out the first detials line below and uncomment the second details line below.
 		// To expose sliders, uncomment the first details line below and comment out the second details line below.
 
-		details(["temperature", "thermostatOperatingState", "humidity", "thermostatMode", "thermostatFanMode", "presence", "heatingSetpoint", "heatSliderControl", "coolingSetpoint", "coolSliderControl", "temperatureUnit", "refresh"])
-		// details(["temperature", "thermostatOperatingState", "humidity", "thermostatMode", "thermostatFanMode", "presence", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "temperatureUnit", "refresh"])
+		//details(["temperature", "thermostatOperatingState", "humidity", "thermostatMode", "thermostatFanMode", "presence", "heatingSetpoint", "heatSliderControl", "coolingSetpoint", "coolSliderControl", "humiditySetpoint", "humiditySliderControl", "refresh"])
+		details(["temperature", "thermostatOperatingState", "humidity", "thermostatMode", "thermostatFanMode", "presence", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "humiditySetpointDown", "humiditySetpoint", "humiditySetpointUp", "refresh"])
 
 		// ============================================================
 
@@ -209,8 +221,9 @@ metadata {
 // update preferences
 def updated() {
 	log.debug "Updated"
-    // reset the authentication
-    data.auth = null
+	// reset the authentication
+	data.auth = null
+	state.has_humidifier = null
 }
 
 // parse events into attributes
@@ -221,7 +234,7 @@ def parse(String description) {
 // handle commands
 def setHeatingSetpoint(temp) {
 	def latestThermostatMode = device.latestState('thermostatMode')
-	def temperatureUnit = device.latestValue('temperatureUnit')
+	def temperatureUnit = getTemperatureUnit()
 
 	switch (temperatureUnit) {
 		case "celsius":
@@ -252,11 +265,11 @@ def setHeatingSetpoint(temp) {
 					temp = 89
 				}
 				if (latestThermostatMode.stringValue == 'auto') {
-					api('temperature', ['target_change_pending': true, 'target_temperature_low': fToC(temp)]) {
+					api('temperature', ['target_change_pending': true, 'target_temperature_low': fahrenheitToCelsius(temp)]) {
 						sendEvent(name: 'heatingSetpoint', value: heatingSetpoint, unit: temperatureUnit, state: "heat")
 					}
 				} else if (latestThermostatMode.stringValue == 'heat') {
-					api('temperature', ['target_change_pending': true, 'target_temperature': fToC(temp)]) {
+					api('temperature', ['target_change_pending': true, 'target_temperature': fahrenheitToCelsius(temp)]) {
 						sendEvent(name: 'heatingSetpoint', value: heatingSetpoint, unit: temperatureUnit, state: "heat")
 					}
 				}
@@ -280,7 +293,7 @@ def coolingSetpointDown(){
 
 def setCoolingSetpoint(temp) {
 	def latestThermostatMode = device.latestState('thermostatMode')
-	def temperatureUnit = device.latestValue('temperatureUnit')
+	def temperatureUnit = getTemperatureUnit()
 
 	switch (temperatureUnit) {
 		case "celsius":
@@ -311,11 +324,11 @@ def setCoolingSetpoint(temp) {
 					temp = 89
 				}
 				if (latestThermostatMode.stringValue == 'auto') {
-					api('temperature', ['target_change_pending': true, 'target_temperature_high': fToC(temp)]) {
+					api('temperature', ['target_change_pending': true, 'target_temperature_high': fahrenheitToCelsius(temp)]) {
 						sendEvent(name: 'coolingSetpoint', value: coolingSetpoint, unit: temperatureUnit, state: "cool")
 					}
 				} else if (latestThermostatMode.stringValue == 'cool') {
-					api('temperature', ['target_change_pending': true, 'target_temperature': fToC(temp)]) {
+					api('temperature', ['target_change_pending': true, 'target_temperature': fahrenheitToCelsius(temp)]) {
 						sendEvent(name: 'coolingSetpoint', value: coolingSetpoint, unit: temperatureUnit, state: "cool")
 					}
 				}
@@ -337,18 +350,41 @@ def heatingSetpointDown(){
 	setHeatingSetpoint(newSetpoint)
 }
 
-def setFahrenheit() {
-	def temperatureUnit = "fahrenheit"
-	log.debug "Setting temperatureUnit to: ${temperatureUnit}"
-	sendEvent(name: "temperatureUnit",   value: temperatureUnit)
-	poll()
+def humiditySetpointUp(){
+	if (state.has_humidifier) {
+		// nest humidity bumps in units of 5
+		int newSetpoint = (device.latestValue("humiditySetpoint") as int) + 5
+		log.debug "Setting humidity set point up to: ${newSetpoint}"
+		setHumiditySetpoint(newSetpoint)
+	}
 }
 
-def setCelsius() {
-	def temperatureUnit = "celsius"
-	log.debug "Setting temperatureUnit to: ${temperatureUnit}"
-	sendEvent(name: "temperatureUnit",   value: temperatureUnit)
-	poll()
+def humiditySetpointDown(){
+	if (state.has_humidifier) {
+		// nest humidity bumps in units of 5
+		int newSetpoint = (device.latestValue('humiditySetpoint') as int) - 5
+		log.debug "Setting humidity set point down to: ${newSetpoint}"
+		setHumiditySetpoint(newSetpoint)
+	}
+}
+
+def setHumiditySetpoint(humiditySP) {
+	if (state.has_humidifier) {
+		// nest only allows humidity between 0% and 60%
+		if (humiditySP < 0) 
+			humiditySP = 0
+		if (humiditySP > 60)
+			humiditySP = 60
+		// round to nearest unit of 5 (mimic Nest restriction)
+		humiditySP = Math.round(humiditySP/5)*5
+		log.debug "setHumiditySetPoint $humiditySP"
+		api('humidity', ['target_humidity': humiditySP]) {
+			sendEvent(name: 'humiditySetpoint', value: humiditySP, unit: 'Humidity')
+			poll()
+		}
+	} else {
+		log.debug "No humidifier detected, humidity setpoint changes ignored"
+	}
 }
 
 def off() {
@@ -434,7 +470,8 @@ def poll() {
 		data.device.fan_mode = data.device.fan_mode == 'duty-cycle'? 'circulate' : data.device.fan_mode
 		data.structure.away = data.structure.away ? 'away' : 'present'
 
-		log.debug(data.shared)
+		// log.debug("data.device: ${data.device}")
+		log.debug("data.shared: " + data.shared)
 
 		def humidity = data.device.current_humidity
 		def temperatureType = data.shared.target_temperature_type
@@ -448,8 +485,7 @@ def poll() {
 		sendEvent(name: 'thermostatFanMode', value: fanMode)
 		sendEvent(name: 'thermostatMode', value: temperatureType)
 
-		def temperatureUnit = device.latestValue('temperatureUnit')
-
+		def temperatureUnit = getTemperatureUnit()
 		switch (temperatureUnit) {
 			case "celsius":
 				def temperature = Math.round(data.shared.current_temperature)
@@ -469,16 +505,16 @@ def poll() {
 				sendEvent(name: 'heatingSetpoint', value: heatingSetpoint, unit: temperatureUnit, state: "heat")
 				break;
 			default:
-				def temperature = Math.round(cToF(data.shared.current_temperature))
-				def targetTemperature = Math.round(cToF(data.shared.target_temperature))
+				def temperature = Math.round(celsiusToFahrenheit(data.shared.current_temperature))
+				def targetTemperature = Math.round(celsiusToFahrenheit(data.shared.target_temperature))
 
 				if (temperatureType == "cool") {
 					coolingSetpoint = targetTemperature
 				} else if (temperatureType == "heat") {
 					heatingSetpoint = targetTemperature
 				} else if (temperatureType == "auto") {
-					coolingSetpoint = Math.round(cToF(data.shared.target_temperature_high))
-					heatingSetpoint = Math.round(cToF(data.shared.target_temperature_low))
+					coolingSetpoint = Math.round(celsiusToFahrenheit(data.shared.target_temperature_high))
+					heatingSetpoint = Math.round(celsiusToFahrenheit(data.shared.target_temperature_low))
 				}
 
 				sendEvent(name: 'temperature', value: temperature, unit: temperatureUnit, state: temperatureType)
@@ -509,6 +545,20 @@ def poll() {
 		} else {
 			sendEvent(name: 'thermostatOperatingState', value: "idle")
 		}
+		// check if a humidifier is installed
+		state.has_humidifier = data.device.has_humidifier
+		if (state.has_humidifier) {
+			log.debug "humidifier detected, current status - active: ${data.device.humidifier_state}, target humidity: ${data.device.target_humidity}, enabled: ${data.device.target_humidity_enabled}"
+			// check if humidity controls are enabled
+			if (!data.device.target_humidity_enabled) 
+				log.warn "Humidity control on thermostat is not enabled, humidity controls will have no impact on current state" 
+			def humidity_target = Math.round(data.device.target_humidity)
+			sendEvent(name: 'humiditySetpoint', value: humidity_target)
+		}
+		else {
+			log.debug "no humidifier detected"
+			sendEvent(name: 'humiditySetpoint', value: 'N/A' )
+		}
 	}
 }
 
@@ -524,7 +574,8 @@ def api(method, args = [], success = {}) {
 		'fan_mode': [uri: "/v2/put/device.${settings.serial}", type: 'post'],
 		'thermostat_mode': [uri: "/v2/put/shared.${settings.serial}", type: 'post'],
 		'temperature': [uri: "/v2/put/shared.${settings.serial}", type: 'post'],
-		'presence': [uri: "/v2/put/structure.${data.structureId}", type: 'post']
+		'presence': [uri: "/v2/put/structure.${data.structureId}", type: 'post'],
+		'humidity': [uri: "/v2/put/device.${settings.serial}", type: 'post']
 	]
 
 	def request = methods.getAt(method)
@@ -598,10 +649,9 @@ def isLoggedIn() {
 	return data.auth.expires_in > now
 }
 
-def cToF(temp) {
-	return (temp * 1.8 + 32).toDouble()
-}
-
-def fToC(temp) {
-	return ((temp - 32) / 1.8).toDouble()
+def getTemperatureUnit() {
+	if (getTemperatureScale() == "C")
+		return "celsius"
+	else
+		return "fahrenheit"
 }

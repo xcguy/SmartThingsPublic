@@ -68,8 +68,8 @@ metadata {
         standardTile("configure", "device.configure", inactiveLabel: false, decoration: "flat", width: 1, height: 1) {
         	state("default", action:"configuration.configure", icon:"st.secondary.configure")
     	}
-        main (["battery", "temperature", "armMode"])
-        details (["temperature","battery","armMode","systemMode", "configure","refresh"])
+        main (["armMode", "temperature"])
+        details (["temperature","armMode","systemMode","battery","configure","refresh"])
 	}
 }
 

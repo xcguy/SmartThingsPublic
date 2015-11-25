@@ -33,13 +33,13 @@ preferences {
 	section("And notify me if it's open for more than this many minutes (default 10)") {
 		input "openThreshold", "number", description: "Number of minutes", required: false
 	}
-    section("Delay between notifications (default 10 minutes") {
-        input "frequency", "number", title: "Number of minutes", description: "", required: false
-    }
+	section("Delay between notifications (default 10 minutes") {
+		input "frequency", "number", title: "Number of minutes", description: "", required: false
+	}
 	section("Via text message at this number (or via push notification if not specified") {
-        input("recipients", "contact", title: "Send notifications to") {
-            input "phone", "phone", title: "Phone number (optional)", required: false
-        }
+		input("recipients", "contact", title: "Send notifications to") {
+			input "phone", "phone", title: "Phone number (optional)", required: false
+		}
 	}
 }
 
@@ -75,7 +75,7 @@ def doorClosed(evt)
 
 def doorOpenTooLong() {
 	def contactState = contact.currentState("contact")
-    def freq = (frequency != null && frequency != "") ? frequency * 60 : 600
+	def freq = (frequency != null && frequency != "") ? frequency * 60 : 600
 
 	if (contactState.value == "open") {
 		def elapsed = now() - contactState.rawDateCreated.time
@@ -83,7 +83,7 @@ def doorOpenTooLong() {
 		if (elapsed >= threshold) {
 			log.debug "Contact has stayed open long enough since last check ($elapsed ms):  calling sendMessage()"
 			sendMessage()
-            runIn(freq, doorOpenTooLong, [overwrite: false])
+			runIn(freq, doorOpenTooLong, [overwrite: false])
 		} else {
 			log.debug "Contact has not stayed open long enough since last check ($elapsed ms):  doing nothing"
 		}
@@ -97,14 +97,14 @@ void sendMessage()
 	def minutes = Math.round((now() - contact.currentState("contact").rawDateCreated.time) / 60000).toString()
 	def msg = "${contact.displayName} has been left open for ${minutes} minutes."
 	log.info msg
-    if (location.contactBookEnabled) {
-        sendNotificationToContacts(msg, recipients)
-    }
-    else {
-        if (phone) {
-            sendSms phone, msg
-        } else {
-            sendPush msg
-        }
-    }
+	if (location.contactBookEnabled) {
+		sendNotificationToContacts(msg, recipients)
+	}
+	else {
+		if (phone) {
+			sendSms phone, msg
+		} else {
+			sendPush msg
+		}
+	}
 }

@@ -21,7 +21,8 @@ metadata {
 		capability "Illuminance Measurement"
 		capability "Temperature Measurement"
 		capability "Relative Humidity Measurement"
- 		capability "Polling"       
+		capability "Sensor"       
+		capability "Polling"       
 
 		attribute "localSunrise", "string"
 		attribute "localSunset", "string"
@@ -37,7 +38,7 @@ metadata {
 		attribute "alertKeys", "string"
 		attribute "sunriseDate", "string"
 		attribute "sunsetDate", "string"
-        attribute "dewpoint", "string"
+		attribute "dewpoint", "string"
 
 		command "refresh"
 	}
@@ -189,11 +190,11 @@ def poll() {
 
 		if(getTemperatureScale() == "C") {
 			send(name: "temperature", value: Math.round(obs.temp_c), unit: "C")
-   			send(name: "dewpoint", value: Math.round(obs.dewpoint_c), unit: "C")
+			send(name: "dewpoint", value: Math.round(obs.dewpoint_c), unit: "C")
 			send(name: "feelsLike", value: Math.round(obs.feelslike_c as Double), unit: "C")
 		} else {
 			send(name: "temperature", value: Math.round(obs.temp_f), unit: "F")
-   			send(name: "dewpoint", value: Math.round(obs.dewpoint_f), unit: "F")
+			send(name: "dewpoint", value: Math.round(obs.dewpoint_f), unit: "F")
 			send(name: "feelsLike", value: Math.round(obs.feelslike_f as Double), unit: "F")
 		}
 		
@@ -222,12 +223,12 @@ def poll() {
 		def sunriseDate = ltf.parse("${today} ${a.sunrise.hour}:${a.sunrise.minute}")
 		def sunsetDate = ltf.parse("${today} ${a.sunset.hour}:${a.sunset.minute}")
 
-        def tf = new java.text.SimpleDateFormat("h:mm a")
-        tf.setTimeZone(TimeZone.getTimeZone("GMT${obs.local_tz_offset}"))
-        def localSunrise = "${tf.format(sunriseDate)}"
-        def localSunset = "${tf.format(sunsetDate)}"
-        send(name: "localSunrise", value: localSunrise, descriptionText: "Sunrise today is at $localSunrise")
-        send(name: "localSunset", value: localSunset, descriptionText: "Sunset today at is $localSunset")
+		def tf = new java.text.SimpleDateFormat("h:mm a")
+		tf.setTimeZone(TimeZone.getTimeZone("GMT${obs.local_tz_offset}"))
+		def localSunrise = "${tf.format(sunriseDate)}"
+		def localSunset = "${tf.format(sunsetDate)}"
+		send(name: "localSunrise", value: localSunrise, descriptionText: "Sunrise today is at $localSunrise")
+		send(name: "localSunset", value: localSunset, descriptionText: "Sunset today at is $localSunset")
 
 		send(name: "illuminance", value: estimateLux(sunriseDate, sunsetDate, weatherIcon))
 

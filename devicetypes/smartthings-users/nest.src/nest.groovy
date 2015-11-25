@@ -375,8 +375,8 @@ def setHumiditySetpoint(humiditySP) {
 			humiditySP = 0
 		if (humiditySP > 60)
 			humiditySP = 60
-		// round to nearest unit of 5 (mimic Nest restriction)
-		humiditySP = Math.round(humiditySP/5)*5
+		// round down to nearest unit of 5 (mimic Nest restriction)
+		humiditySP = Math.floor(humiditySP/5)*5
 		log.debug "setHumiditySetPoint $humiditySP"
 		api('humidity', ['target_humidity': humiditySP]) {
 			sendEvent(name: 'humiditySetpoint', value: humiditySP, unit: 'Humidity')

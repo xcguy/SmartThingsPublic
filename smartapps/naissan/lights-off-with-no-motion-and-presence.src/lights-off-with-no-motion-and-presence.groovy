@@ -5,13 +5,13 @@
  */
 
 definition(
-    name: "Lights Off with No Motion and Presence",
-    namespace: "naissan",
-    author: "Bruce Adelsman",
-    description: "Turn lights off when no motion and presence is detected for a set period of time.",
-    category: "Convenience",
-    iconUrl: "https://s3.amazonaws.com/smartapp-icons/Meta/light_presence-outlet.png",
-    iconX2Url: "https://s3.amazonaws.com/smartapp-icons/Meta/light_presence-outlet@2x.png"
+		name: "Lights Off with No Motion and Presence",
+		namespace: "naissan",
+		author: "Bruce Adelsman",
+		description: "Turn lights off when no motion and presence is detected for a set period of time.",
+		category: "Convenience",
+		iconUrl: "https://s3.amazonaws.com/smartapp-icons/Meta/light_presence-outlet.png",
+		iconX2Url: "https://s3.amazonaws.com/smartapp-icons/Meta/light_presence-outlet@2x.png"
 )
 
 preferences {
@@ -20,7 +20,7 @@ preferences {
 	}
 	section("Turn off when there is no motion and presence") {
 		input "motionSensor", "capability.motionSensor", title: "Choose motion sensor"
-   		input "presenceSensors", "capability.presenceSensor", title: "Choose presence sensors", multiple: true
+		input "presenceSensors", "capability.presenceSensor", title: "Choose presence sensors", multiple: true
 	}
 	section("Delay before turning off") {                    
 		input "delayMins", "number", title: "Minutes of inactivity?"
@@ -29,13 +29,13 @@ preferences {
 
 def installed() {
 	subscribe(motionSensor, "motion", motionHandler)
-    subscribe(presenceSensors, "presence", presenceHandler)
+	subscribe(presenceSensors, "presence", presenceHandler)
 }
 
 def updated() {
 	unsubscribe()
 	subscribe(motionSensor, "motion", motionHandler)
-    subscribe(presenceSensors, "presence", presenceHandler)
+	subscribe(presenceSensors, "presence", presenceHandler)
 }
 
 def motionHandler(evt) {
@@ -62,27 +62,27 @@ def isActivePresence() {
 def isLightsOn() {
 	// check all the switches to find none are on
 	def noLights = switches.find{it.currentSwitch == "on"} == null
-    !noLights
+	!noLights
 }
 
 def scheduleCheck() {
 	log.debug "scheduled check"
-    if (isLightsOn()) {
+	if (isLightsOn()) {
 		def motionState = motionSensor.currentState("motion")
-    	if (motionState.value == "inactive") {
-        	def elapsed = now() - motionState.rawDateCreated.time
-    		def threshold = 1000 * 60 * delayMins - 1000
-    		if (elapsed >= threshold) {
-	        	if (!isActivePresence()) {
-	            	log.debug "Motion has stayed inactive since last check ($elapsed ms) and no presence:  turning lights off"
-	            	switches.off()
-	            } else 
-	            	log.debug "Presence is active: do nothing"
-	    	} else 
-	        	log.debug "Motion has not stayed inactive long enough since last check ($elapsed ms): do nothing"
-    	} else 
-	    	log.debug "Motion is active: do nothing"
-    }
+		if (motionState.value == "inactive") {
+			def elapsed = now() - motionState.rawDateCreated.time
+			def threshold = 1000 * 60 * delayMins - 1000
+			if (elapsed >= threshold) {
+				if (!isActivePresence()) {
+					log.debug "Motion has stayed inactive since last check ($elapsed ms) and no presence:  turning lights off"
+					switches.off()
+				} else 
+					log.debug "Presence is active: do nothing"
+			} else 
+				log.debug "Motion has not stayed inactive long enough since last check ($elapsed ms): do nothing"
+		} else 
+				log.debug "Motion is active: do nothing"
+	}
 	else 
-   	   	log.debug "No lights on: do nothing"
+		log.debug "No lights on: do nothing"
 }

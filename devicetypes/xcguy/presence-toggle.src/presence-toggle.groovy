@@ -6,7 +6,7 @@
  *  Date: 2015-10-12
  */
 metadata {
-	definition (name: "Presence Toggle", namespace: "naissan", author: "Bruce Adelsman", oauth: true) {
+	definition (name: "Presence Toggle", namespace: "xcguy", author: "Bruce Adelsman", oauth: true) {
 		capability "Actuator"
   		capability "Presence Sensor"
    		capability "Motion Sensor"

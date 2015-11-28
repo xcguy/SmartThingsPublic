@@ -6,7 +6,7 @@
 
 definition(
 		name: "Lights Off with No Motion and Presence",
-		namespace: "naissan",
+		namespace: "xcguy",
 		author: "Bruce Adelsman",
 		description: "Turn lights off when no motion and presence is detected for a set period of time.",
 		category: "Convenience",

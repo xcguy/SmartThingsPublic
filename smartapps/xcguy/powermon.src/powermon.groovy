@@ -15,7 +15,7 @@
  */
 definition(
     name: "PowerMon",
-    namespace: "naissan",
+    namespace: "xcguy",
     author: "Bruce Adelsman",
     description: "Monitors an energy switch and reports to an activity sensor, using energy levels to reflect a presence status.   One of these SmartApps is needed for each energy switch/presence pairing.",
     category: "Green Living",

@@ -1,5 +1,5 @@
 metadata {
-	definition (name: "Water Softener Sensor", namespace: "naissan", author: "Bruce Adelsman", oauth: true) {
+	definition (name: "Water Softener Sensor", namespace: "xcguy", author: "Bruce Adelsman", oauth: true) {
 		capability "Sensor"
         capability "Actuator"
         

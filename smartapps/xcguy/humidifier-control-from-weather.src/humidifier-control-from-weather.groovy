@@ -23,7 +23,7 @@
  */
 definition(
     name: "Humidifier Control from Weather",
-    namespace: "naissan",
+    namespace: "xcguy",
     author: "Bruce Adelsman",
     description: "Adjusts the target humidity level on the thermostat based on an outdoor temperature reading.   Designed for cold climates, where humidity levels may need to be lowered according to temperature to help prevent condensation.",
     category: "Convenience",

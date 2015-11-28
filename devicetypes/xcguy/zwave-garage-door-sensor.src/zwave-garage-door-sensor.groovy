@@ -10,35 +10,23 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Mailbox Sensor
+ *  Z-Wave Garage Door Sensor
  *
  *  Author: Bruce Adelsman
- *  Date: 2015-10-30
+ *  Date: 2015-09-12
+ *  Based on SmartThings Z-Wave Door/Window Sensor
  */
 
 metadata {
-	definition (name: "Mailbox Sensor", namespace: "naissan", author: "Bruce Adelsman") {
+	definition (name: "Z-Wave Garage Door Sensor", namespace: "xcguy", author: "Bruce Adelsman") {
 		capability "Contact Sensor"
 		capability "Sensor"
 		capability "Battery"
 		capability "Configuration"
 
-    	attribute "mailbox", "string"
-        
-        command "setFull"
-        command "setEmpty"
-        command "reset"
-
-	}
-    
-    preferences {
-    	input "fullDetect", "enum", title: "Full detection method:",
-       		options: [
-            	"first access",
-                "toggle"
-                ],
-        	defaultValue: "first access", required: true,
-            description: "Mailbox is determined to be full on only the first access of the day or on every other access (toggle)."
+		fingerprint deviceId: "0x2001", inClusters: "0x30,0x80,0x84,0x85,0x86,0x72"
+		fingerprint deviceId: "0x07", inClusters: "0x30"
+		fingerprint deviceId: "0x0701", inClusters: "0x5E,0x86,0x72,0x98", outClusters: "0x5A,0x82"
 	}
 
 	// simulator metadata
@@ -46,31 +34,20 @@ metadata {
 		// status messages
 		status "open":  "command: 2001, payload: FF"
 		status "closed": "command: 2001, payload: 00"
-        status "full": "full"
-        status "empty": "empty"
 	}
 
 	// UI tile definitions
 	tiles {
-		standardTile("mailbox", "device.mailbox", width: 2, height: 2) {
-		//	state "full", label: '${name}', icon: "st.quirky.nimbus.quirky-nimbus-mail", backgroundColor: "#ffa81e", action: "setEmpty"
-		//	state "empty", label: '${name}', icon: "st.quirky.nimbus.quirky-nimbus-mail", backgroundColor: "#79b821",  action: "setFull"
-			state "full", label: '${name}', icon: "st.quirky.nimbus.quirky-nimbus-mail", backgroundColor: "#ffa81e"
-			state "empty", label: '${name}', icon: "st.quirky.nimbus.quirky-nimbus-mail", backgroundColor: "#79b821"
-}
-		standardTile("contact", "device.contact" ) {
-			state "open", label: '${name}', icon: "st.contact.contact.open", backgroundColor: "#ffa81e"
-			state "closed", label: '${name}', icon: "st.contact.contact.closed", backgroundColor: "#79b821"
+		standardTile("contact", "device.contact", width: 2, height: 2) {
+			state "open", label: '${name}', icon: "st.doors.garage.garage-open", backgroundColor: "#ffa81e"
+			state "closed", label: '${name}', icon: "st.doors.garage.garage-closed", backgroundColor: "#79b821"
 		}
-        standardTile("reset", "device.contact", width: 1, height: 1, canChangeIcon: false, canChangeBackground: false, decoration: "flat") {
-			state "default", label: "Reset", icon: "", action: "reset"
-        }               
 		valueTile("battery", "device.battery", inactiveLabel: false, decoration: "flat") {
 			state "battery", label:'${currentValue}% battery', unit:""
 		}
 
-		main("mailbox")
-		details(["mailbox", "contact", "reset", "battery"])
+		main "contact"
+		details(["contact", "battery"])
 	}
 }
 
@@ -88,9 +65,7 @@ def parse(String description) {
 				isStateChange: true,
 			)
 		}
-	} else if (description == "empty" || description == "full") {
-   		result = createEvent(name: "mailbox", value: "$description")
-    } else if (description != "updated") {
+	} else if (description != "updated") {
 		def cmd = zwave.parse(description, [0x20: 1, 0x25: 1, 0x30: 1, 0x31: 5, 0x80: 1, 0x84: 1, 0x71: 3, 0x9C: 1])
 		if (cmd) {
 			result = zwaveEvent(cmd)
@@ -100,35 +75,7 @@ def parse(String description) {
 	return result
 }
 
-def setFull() {
-	log.debug "Mailbox set to full"
-	sendEvent(name: "mailbox", value: "full")
-}
-
-def setEmpty() {
-	log.debug "Mailbox emptied"
-	sendEvent(name: "mailbox", value: "empty")
-}
-
-def reset() {
-	setEmpty()
-    state.lastDeliveryDay = 0
-}
-
-def isEmpty() {
-	return device.currentValue("mailbox") == "empty"
-}
-
-def isFull() {
-	return device.currentValue("mailbox") == "full"
-}
-
-def install() {
-	state.lastDeliveryDay = 0
-}
-
 def updated() {
-	state.lastDeliveryDay = state.lastDeliveryDay ?: 0
 	def cmds = []
 	if (!state.MSR) {
 		cmds = [
@@ -151,25 +98,10 @@ def configure() {
 	], 6000)
 }
 
-def processDoorClose() {
-	log.debug "Processing mailbox door closure (detection: $fullDetect)"
-    def currentDay = new Date().format("d", location.timeZone)
-    // if first access on the day or full detection is toggle and mailbox is empty
-    if (state.lastDeliveryDay != currentDay || (fullDetect == "toggle" && isEmpty())) {
- 		setFull()
-    } 
-    else {
-    // else if (isFull()) {
- 		setEmpty()
-    }
-    state.lastDeliveryDay = currentDay
-}
-
 def sensorValueEvent(value) {
 	if (value) {
 		createEvent(name: "contact", value: "open", descriptionText: "$device.displayName is open")
 	} else {
-    	processDoorClose()
 		createEvent(name: "contact", value: "closed", descriptionText: "$device.displayName is closed")
 	}
 }
@@ -323,3 +255,4 @@ def retypeBasedOnMSR() {
 		
 	}
 }
+

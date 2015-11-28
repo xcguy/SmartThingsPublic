@@ -6,7 +6,7 @@
  */
 definition(
     name: "Water Softener Endpoint",
-    namespace: "naissan",
+    namespace: "xcguy",
     author: "Bruce Adelsman",
     description: "Receives updates on water softener salt level.",
     category: "My Apps",

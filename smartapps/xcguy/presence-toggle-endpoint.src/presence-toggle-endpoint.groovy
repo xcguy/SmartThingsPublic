@@ -6,7 +6,7 @@
  */
 definition(
     name: "Presence Toggle Endpoint",
-    namespace: "naissan",
+    namespace: "xcguy",
     author: "Bruce Adelsman",
     description: "Endpoint for presence detector system.",
     category: "My Apps",

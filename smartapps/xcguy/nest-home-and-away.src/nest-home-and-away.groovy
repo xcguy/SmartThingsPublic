@@ -6,7 +6,7 @@
 
 definition(
     name:        "Nest Home and Away",
-    namespace:   "naissan",
+    namespace:   "xcguy",
     author:      "Bruce Adelsman",
     description: "Sets the thermostat to away or present based on hub mode.",
     category:    "Green Living",

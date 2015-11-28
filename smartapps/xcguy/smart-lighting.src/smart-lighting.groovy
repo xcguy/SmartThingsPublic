@@ -5,7 +5,7 @@
  */
 definition(
     name: "Smart Lighting",
-    namespace: "naissan",
+    namespace: "xcguy",
     author: "Bruce Adelsman",
     description: "Turn  lights on when it gets dark and off when it becomes light again.",
     category: "Convenience",

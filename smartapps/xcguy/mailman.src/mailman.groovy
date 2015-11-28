@@ -6,7 +6,7 @@
  */
 definition(
     name: "Mailman",
-    namespace: "naissan",
+    namespace: "xcguy",
     author: "Bruce Adelsman",
     description: "Monitors mailbox sensor, setting the mailbox status (full or empty), and send a reminder if the mailbox is not emptied.",
     category: "Convenience",

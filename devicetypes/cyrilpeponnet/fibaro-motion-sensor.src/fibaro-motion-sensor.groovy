@@ -100,7 +100,7 @@ metadata {
             ]
         }
         valueTile("illuminance", "device.illuminance", inactiveLabel: false) {
-            state "luminosity", label:'${currentValue} ${unit}', unit:"lux"
+            state "luminosity", label:'${currentValue} lux', unit:"lux"
         }
         valueTile("battery", "device.battery", inactiveLabel: false, decoration: "flat") {
             state "battery", label:'${currentValue}% battery', unit:""
@@ -252,8 +252,8 @@ def zwaveEvent(physicalgraph.zwave.commands.sensormultilevelv2.SensorMultilevelR
         case 1:
             map.name = "temperature"
             def cmdScale = cmd.scale == 1 ? "F" : "C"
-            map.value = convertTemperatureIfNeeded(cmd.scaledSensorValue, cmdScale, cmd.precision)
-            map.unit  = getTemperatureScale()
+			map.value = Math.round(convertTemperatureIfNeeded(cmd.scaledSensorValue, cmdScale,  cmd.precision).toFloat()).toString()
+			map.unit  = getTemperatureScale()
             break;
         case 3:
             map.name = "illuminance"

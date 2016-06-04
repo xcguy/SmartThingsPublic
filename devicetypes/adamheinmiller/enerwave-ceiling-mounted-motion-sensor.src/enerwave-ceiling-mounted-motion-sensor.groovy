@@ -105,7 +105,7 @@ def configure()
 		// Get initial battery report
 		zwave.batteryV1.batteryGet().format()
 
-	], 100)	
+	],200)	
 }
 
 def setMotionTimeout() {

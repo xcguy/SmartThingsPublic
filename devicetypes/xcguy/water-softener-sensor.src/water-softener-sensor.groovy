@@ -6,7 +6,7 @@ metadata {
         attribute "lowSaltFlag", "enum", [ "On, Off" ]
         attribute "saltLevel", "number"
         
-        command "updateSaltLevel", ["String" ] 
+        command "updateSaltLevel", ["number" ] 
     }
 
 
@@ -60,7 +60,7 @@ def updateSaltLevel(value) {
 	log.debug "updateSaltLevel ${value}"
     if (value != null) {
 		sendEvent(name: "saltLevel", value: value)
-    	if (Integer.parseInt(value) <= Integer.parseInt(lowSaltLevel)) {
+    	if ((value as int) <= (device.currentValue("lowSaltLevel") as int)) {
 	    	if (!(device.currentValue("lowSaltFlag") == "On")) {
     			log.debug "setting low salt flag to on"
    				sendEvent(name: "lowSaltFlag", value: "On")

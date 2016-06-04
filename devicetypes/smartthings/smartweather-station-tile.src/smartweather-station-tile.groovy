@@ -32,6 +32,8 @@ metadata {
 		attribute "wind", "string"
 		attribute "weatherIcon", "string"
 		attribute "forecastIcon", "string"
+        attribute "forecastHigh", "string"
+        attribute "forecastLow", "string"
 		attribute "feelsLike", "string"
 		attribute "percentPrecip", "string"
 		attribute "alert", "string"
@@ -161,9 +163,15 @@ metadata {
 		valueTile("light", "device.illuminance", decoration: "flat") {
 			state "default", label:'${currentValue} lux'
 		}
+        valueTile("forecastHigh", "device.forecastHigh", decoration: "flat") {
+			state "default", label:'High ${currentValue}°'
+		}
+        valueTile("forecastLow", "device.forecastLow", decoration: "flat") {
+			state "default", label:'Low ${currentValue}°'
+		}
 
 		main(["temperature", "weatherIcon","feelsLike"])
-		details(["temperature", "dewpoint", "humidity", "weatherIcon","feelsLike","wind","weather","city","percentPrecip","alert","rise","set","light","refresh"])}
+		details(["temperature", "dewpoint", "humidity", "weatherIcon","feelsLike","wind","weather","city","percentPrecip","alert","rise","set","light", "forecastHigh", "forecastLow", "refresh"])}
 }
 
 // parse events into attributes
@@ -240,6 +248,13 @@ def poll() {
 			def value = f1[0].pop as String // as String because of bug in determining state change of 0 numbers
 			send(name: "percentPrecip", value: value, unit: "%")
 			send(name: "forecastIcon", value: icon, displayed: false)
+       		if(getTemperatureScale() == "C") {
+				send(name: "forecastHigh", value: f1[0].high.celsius, unit: "C")
+				send(name: "forecastLow", value: f1[0].low.celsius, unit: "C")
+			} else {
+				send(name: "forecastHigh", value: f1[0].high.fahrenheit, unit: "F")
+				send(name: "forecastLow", value: f1[0].low.fahrenheit, unit: "F")
+			}
 		}
 		else {
 			log.warn "Forecast not found"

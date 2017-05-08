@@ -180,11 +180,15 @@ def parse(String description) {
 }
 
 def installed() {
-	runPeriodically(3600, poll)
+	runEvery15Minutes(poll)
 }
 
 def uninstalled() {
 	unschedule()
+}
+
+def updated() {
+	runEvery15Minutes(poll)
 }
 
 // handle commands

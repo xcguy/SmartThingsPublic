@@ -158,8 +158,8 @@ metadata {
 		}
 
 		standardTile("presence", "device.presence", inactiveLabel: false, decoration: "flat") {
-			state "present", label:'${name}', action:"away", icon: "st.Home.home2"
-			state "not present", label:'away', action:"present", icon: "st.Transportation.transportation5"
+			state "present", label:'${name}', action:"present", icon: "st.Home.home2"
+			state "not present", label:'away', action:"away", icon: "st.Transportation.transportation5"
 		}
 
 		standardTile("refresh", "device.thermostatMode", inactiveLabel: false, decoration: "flat") {
@@ -224,6 +224,8 @@ def updated() {
 	// reset the authentication
 	data.auth = null
 	state.has_humidifier = null
+    
+    runEvery15Minutes(poll)
 }
 
 // parse events into attributes
@@ -375,8 +377,8 @@ def setHumiditySetpoint(humiditySP) {
 			humiditySP = 0
 		if (humiditySP > 60)
 			humiditySP = 60
-		// round down to nearest unit of 5 (mimic Nest restriction)
-		humiditySP = Math.floor(humiditySP/5)*5
+		// round to nearest unit of 5 (mimic Nest restriction)
+		humiditySP = Math.round(humiditySP/5)*5
 		log.debug "setHumiditySetPoint $humiditySP"
 		api('humidity', ['target_humidity': humiditySP]) {
 			sendEvent(name: 'humiditySetpoint', value: humiditySP, unit: 'Humidity')

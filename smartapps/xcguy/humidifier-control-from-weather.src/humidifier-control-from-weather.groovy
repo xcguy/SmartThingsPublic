@@ -70,6 +70,19 @@ def temperatureHandler(evt) {
 	// convert C to F just for the humidity calculation
 	if (tempScale == "C")
     	tempValue = celsiusToFahrenheit(tempValue)
+ 	try {
+		// try to use the forecast low, if the weather unit reports one
+		def forecastLowStr = outdoorTemp.currentState("forecastLow") as String
+		log.debug "Forecast low $forecastLowStr"
+		def forecastLow = forecastLowStr.split()[0] as float
+        if (forecastLow < tempValue) {
+        	tempValue = forecastLow
+			log.debug "Overriding temp using forecast low $forecastLow"
+        }
+    } catch (Throwable e) {
+		log.debug "Exception: $e"
+    	// ignore it
+	}
     // calculate the target humidity
     // formula is the standard humidity recommendation:  -20F = 15%, 0F = 25%,  20F = 35%, 
     def humidityLevel = Math.round((tempValue/10)*5+25) as int

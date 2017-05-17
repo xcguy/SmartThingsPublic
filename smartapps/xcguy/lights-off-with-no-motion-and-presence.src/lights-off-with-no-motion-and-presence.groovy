@@ -19,7 +19,7 @@ preferences {
 		input "switches", "capability.switch", title: "Choose light switches", multiple: true
 	}
 	section("Turn off when there is no motion and presence") {
-		input "motionSensor", "capability.motionSensor", title: "Choose motion sensor"
+		input "motionSensors", "capability.motionSensor", title: "Choose motion sensors", multiple: true
 		input "presenceSensors", "capability.presenceSensor", title: "Choose presence sensors", multiple: true
 	}
 	section("Delay before turning off") {                    
@@ -28,18 +28,21 @@ preferences {
 }
 
 def installed() {
-	subscribe(motionSensor, "motion", motionHandler)
+	state.lastActivity = now()
+	subscribe(motionSensors, "motion", motionHandler)
 	subscribe(presenceSensors, "presence", presenceHandler)
 }
 
 def updated() {
 	unsubscribe()
-	subscribe(motionSensor, "motion", motionHandler)
+    state.lastActivity = now()
+	subscribe(motionSensors, "motion", motionHandler)
 	subscribe(presenceSensors, "presence", presenceHandler)
 }
 
 def motionHandler(evt) {
 	log.debug "handler $evt.name: $evt.value"
+    state.lastActivity = now()
 	if (evt.value == "inactive") {
 		runIn(delayMins * 60, scheduleCheck, [overwrite: false])
 	}
@@ -47,17 +50,23 @@ def motionHandler(evt) {
 
 def presenceHandler(evt) {
 	log.debug "handler $evt.name: $evt.value"
+    state.lastActivity = now()
 	if (evt.value == "not present") {
 		runIn(delayMins * 60, scheduleCheck, [overwrite: false])
 	}
 }
 
-def isActivePresence() {
+def isPresenceActive() {
 	// check all the presence sensors to find none are present
 	def noPresence = presenceSensors.find{it.currentPresence == "present"} == null
 	!noPresence		
 }
 
+def isMotionActive() {
+	// check all the motion sensors to find none are active
+	def noMotion = motionSensors.find{it.currentMotion == "active"} == null
+	!noMotion	
+}
 
 def isLightsOn() {
 	// check all the switches to find none are on
@@ -68,20 +77,19 @@ def isLightsOn() {
 def scheduleCheck() {
 	log.debug "scheduled check"
 	if (isLightsOn()) {
-		def motionState = motionSensor.currentState("motion")
-		if (motionState.value == "inactive") {
-			def elapsed = now() - motionState.rawDateCreated.time
+    	def curtime = now()
+        def lastCheck = state.lastActivity as int
+        log.debug "lastcheck $lastCheck and now $curtime"
+		if (!isMotionActive() && !isPresenceActive()) {
+			def elapsed = now() - lastCheck
 			def threshold = 1000 * 60 * delayMins - 1000
 			if (elapsed >= threshold) {
-				if (!isActivePresence()) {
-					log.debug "Motion has stayed inactive since last check ($elapsed ms) and no presence:  turning lights off"
-					switches.off()
-				} else 
-					log.debug "Presence is active: do nothing"
+            	log.debug "Motion/presence has stayed inactive since last check ($elapsed ms):  turning lights off"
+				switches.off()
 			} else 
-				log.debug "Motion has not stayed inactive long enough since last check ($elapsed ms): do nothing"
+				log.debug "Motion/presence has not stayed inactive long enough since last check ($elapsed ms): do nothing"
 		} else 
-				log.debug "Motion is active: do nothing"
+				log.debug "Motion/presence is active: do nothing"
 	}
 	else 
 		log.debug "No lights on: do nothing"

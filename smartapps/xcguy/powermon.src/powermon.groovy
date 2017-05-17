@@ -34,6 +34,10 @@ preferences {
 	section("Activity Sensor") {                    
 	    input "activitySensor", "capability.presenceSensor", title: "Choose activity sensor"
 	}
+    section("Notifications") {
+       	input "powerOn", "bool", title: "Power on", required: false, defaultValue: false
+       	input "powerOff", "bool", title: "Power off", required: false, defaultValue: false
+ 	}  
 }
 
 def installed() {
@@ -43,8 +47,8 @@ def installed() {
 
 def updated() {
 	unsubscribe()
-  subscribe(powerMeter, "power", powerHandler)
-  log.debug "PowerMon - power active: $powerActive"
+    subscribe(powerMeter, "power", powerHandler)
+ 	log.debug "PowerMon - power active: $powerActive"
 }
 
 def powerHandler(evt) {
@@ -57,10 +61,14 @@ def powerHandler(evt) {
   	if (activityState == "not present") {
     	log.debug "${powerMeter} reported energy consumption above ${powerActive}. Turning on presence for ${activitySensor}."
     	activitySensor.active()
+        if (powerOn)
+        	sendPush "${activitySensor.displayName} is on"
     }
   } else if (activityState == "present") {
    	log.debug "${powerMeter} reported energy consumption below ${powerActive}. Turning off presence ${activitySensor}."
   	activitySensor.inactive()
+    if (powerOff)
+        sendPush "${activitySensor.displayName} is off"
   }
 }
 

@@ -23,10 +23,6 @@ preferences {
        	input "sendNotification", "bool", title: "Push notification", required: false, defaultValue: "false"
        	input "phoneNumber", "phone", title: "Send a text message to:", required: false
  	}   
-//	section ("GroveStreams Feed PUT API key") {
-//		input "channelKey", "text", title: "API key", required: false
-//	}
-
 }
 
 mappings {
@@ -77,7 +73,7 @@ private void update(devices) {
 	// log.debug "update, request: params: ${params}, devices: $devices.id"   
     
     def command = params.command
-    def val = params.val
+    def val = params.val as int
  	if (command) 
     {
 		def device = devices.find { it.id == params.id }
@@ -86,8 +82,6 @@ private void update(devices) {
 		} else {
             // log.debug "Previous saltlevel: "+device.currentState("saltlevel")
             device.updateSaltLevel(val)
-            // if (channelKey) 
-            //	logValue(device, "percentage", val)
 		}
 	}
 }
@@ -149,24 +143,4 @@ def sendWarningMessage(sensor)
 	    sendSms(phoneNumber, msg)
     }
 }
-
-
-//private logValue(device, valtype, val) {
-//	def compId = URLEncoder.encode(device.displayName.trim())
-//	def streamId = URLEncoder.encode(valtype)
-//	def value = val
-//	
-//	log.debug "Logging to GroveStreams ${compId}, ${streamId} = ${value}"
-//	
-//	def url = "https://grovestreams.com/api/feed?api_key=${channelKey}&compId=${compId}&${streamId}=${value}"
-//	def putParams = [
-//		uri: url,
-//		body: []]
-//
-//	httpPut(putParams) { response ->
-//		if (response.status != 200 ) {
-//			log.debug "GroveStreams logging failed, status = ${response.status}"
-//		}
-//	}
-//}
 

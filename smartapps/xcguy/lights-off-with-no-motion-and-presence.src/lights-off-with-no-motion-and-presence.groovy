@@ -28,31 +28,27 @@ preferences {
 }
 
 def installed() {
-	state.lastActivity = now()
 	subscribe(motionSensors, "motion", motionHandler)
 	subscribe(presenceSensors, "presence", presenceHandler)
 }
 
 def updated() {
 	unsubscribe()
-    state.lastActivity = now()
 	subscribe(motionSensors, "motion", motionHandler)
 	subscribe(presenceSensors, "presence", presenceHandler)
 }
 
 def motionHandler(evt) {
 	log.debug "handler $evt.name: $evt.value"
-    state.lastActivity = now()
 	if (evt.value == "inactive") {
-		runIn(delayMins * 60, scheduleCheck, [overwrite: false])
+		runIn(delayMins * 60, scheduleCheck)
 	}
 }
 
 def presenceHandler(evt) {
 	log.debug "handler $evt.name: $evt.value"
-    state.lastActivity = now()
 	if (evt.value == "not present") {
-		runIn(delayMins * 60, scheduleCheck, [overwrite: false])
+		runIn(delayMins * 60, scheduleCheck)
 	}
 }
 
@@ -77,19 +73,11 @@ def isLightsOn() {
 def scheduleCheck() {
 	log.debug "scheduled check"
 	if (isLightsOn()) {
-    	def curtime = now()
-        def lastCheck = state.lastActivity as int
-        log.debug "lastcheck $lastCheck and now $curtime"
 		if (!isMotionActive() && !isPresenceActive()) {
-			def elapsed = now() - lastCheck
-			def threshold = 1000 * 60 * delayMins - 1000
-			if (elapsed >= threshold) {
-            	log.debug "Motion/presence has stayed inactive since last check ($elapsed ms):  turning lights off"
-				switches.off()
-			} else 
-				log.debug "Motion/presence has not stayed inactive long enough since last check ($elapsed ms): do nothing"
+            log.debug "Motion/presence has been inactive for at least $delayMins mins:  turning lights off"
+			switches.off()
 		} else 
-				log.debug "Motion/presence is active: do nothing"
+			log.debug "Motion/presence is active again: do nothing"
 	}
 	else 
 		log.debug "No lights on: do nothing"

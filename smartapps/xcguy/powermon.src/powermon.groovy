@@ -1,7 +1,7 @@
 /**
  *  PowerMon
  *
- *  Copyright 2015 Bruce Adelsman
+ *  Copyright 2015-17 Bruce Adelsman
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -28,11 +28,14 @@ preferences {
 	section("Power monitoring") {
  	   input "powerMeter", "capability.powerMeter", title: "Choose power meter"
  	   input "powerActive", "number", title: "Power active level",
- 	   		description: "Power level at which presence is considered active (default: 20).", defaultValue: 20,
+ 	   		description: "Power level at which device is considered active (default: 20).", defaultValue: 20,
   			required: false, displayDuringSetup: true
 	}
 	section("Activity Sensor") {                    
 	    input "activitySensor", "capability.presenceSensor", title: "Choose activity sensor"
+        input "inactivityDelay", "number", title: "Sensor inactivity delay",
+ 	   		description: "Delay in minutes before registering inactivity (default: 0).", defaultValue: 0,
+  			required: false, displayDuringSetup: true
 	}
     section("Notifications") {
        	input "powerOn", "bool", title: "Power on", required: false, defaultValue: false
@@ -42,22 +45,33 @@ preferences {
 
 def installed() {
   subscribe(powerMeter, "power", powerHandler)
-  log.debug "PowerMon - power active: $powerActive"
 }
 
 def updated() {
 	unsubscribe()
     subscribe(powerMeter, "power", powerHandler)
- 	log.debug "PowerMon - power active: $powerActive"
 }
 
-def powerHandler(evt) {
+def isPowerActive(level) {
+  return(level > getPowerActiveLevel())
+}
 
-  def meterValue = evt.value as int
-  def powerActiveLevel = powerActive as int
+def getPowerActiveLevel() {
+	return (powerActive == null ? 20 : powerActive as int)
+}
+
+def getInactivityDelayMins() {
+	return (inactivityDelay == null ? 0 : inactivityDelay as int)
+}
+
+
+def powerHandler(evt) {
   def activityState = activitySensor.currentValue("presence")
-	log.debug "PowerMon - power event handler - power: ${meterValue}, cur presence: ${activityState}"
-  if (meterValue > powerActiveLevel) {
+  def meterValue = evt == null ? powerMeter.currentValue("power") as int : evt.value as int
+
+  log.debug "PowerMon - handler - power: ${meterValue}, presence: ${activityState}"
+  if (isPowerActive(meterValue)) {
+  	log.debug "PowerMon - power active"
   	if (activityState == "not present") {
     	log.debug "${powerMeter} reported energy consumption above ${powerActive}. Turning on presence for ${activitySensor}."
     	activitySensor.active()
@@ -65,12 +79,17 @@ def powerHandler(evt) {
         	sendPush "${activitySensor.displayName} is on"
     }
   } else if (activityState == "present") {
-   	log.debug "${powerMeter} reported energy consumption below ${powerActive}. Turning off presence ${activitySensor}."
-  	activitySensor.inactive()
-    if (powerOff)
-        sendPush "${activitySensor.displayName} is off"
+  	log.debug "PowerMon - power inactive"
+  	if (evt == null || getInactivityDelayMins() == 0) {
+   		log.debug "${powerMeter} reported energy consumption below ${powerActive}. Turning off presence ${activitySensor}."
+  		activitySensor.inactive()
+   		if (powerOff)
+        	sendPush "${activitySensor.displayName} is off"
+  	} else {
+    	log.debug "${powerMeter} reported energy consumption below ${powerActive}, inactivity delay for ${getInactivityDelayMins()} mins."
+  		runIn(getInactivityDelayMins()*60, powerHandler)
+    }
   }
 }
-
 
 

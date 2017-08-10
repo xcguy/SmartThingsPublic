@@ -180,7 +180,7 @@ def parse(String description) {
 }
 
 def installed() {
-	runEvery15Minutes(poll)
+    runIn(15, scheduledPolling)
 }
 
 def uninstalled() {
@@ -188,7 +188,9 @@ def uninstalled() {
 }
 
 def updated() {
-	runEvery15Minutes(poll)
+	unschedule()
+    log.debug "Updated, rescheduling"
+	runIn(15, scheduledPolling)
 }
 
 // handle commands
@@ -308,6 +310,12 @@ def refresh() {
 
 def configure() {
 	poll()
+}
+
+def scheduledPolling() {
+	log.debug "Self-scheduled poll"
+    poll()
+    runIn(60*15, scheduledPolling)
 }
 
 private pad(String s, size = 25) {

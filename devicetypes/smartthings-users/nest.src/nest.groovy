@@ -218,14 +218,23 @@ metadata {
 
 }
 
+def installed() {
+    runIn(15, scheduledPolling)
+}
+
+def uninstalled() {
+	unschedule()
+}
+
 // update preferences
 def updated() {
+	unschedule()
 	log.debug "Updated"
 	// reset the authentication
 	data.auth = null
 	state.has_humidifier = null
     
-    runEvery15Minutes(poll)
+    runIn(15, scheduledPolling)
 }
 
 // parse events into attributes
@@ -461,6 +470,12 @@ def setPresence(status) {
 	}
 }
 
+def scheduledPolling() {
+	log.debug "Self-scheduled poll"
+    poll()
+    runIn(15*60, scheduledPolling)
+}
+
 def poll() {
 	log.debug "Executing 'poll'"
 	api('status', []) {
@@ -632,6 +647,7 @@ def login(method = null, args = [], success = {}) {
 		body: [username: settings.username, password: settings.password]
 	]
 
+	try {
 	httpPost(params) {response ->
 		data.auth = response.data
 		data.auth.expires_in = Date.parse('EEE, dd-MMM-yyyy HH:mm:ss z', response.data.expires_in).getTime()
@@ -639,6 +655,10 @@ def login(method = null, args = [], success = {}) {
 
 		api(method, args, success)
 	}
+    } catch (Throwable e) {
+    	log.debug "Login exception ${e}, resetting auth"
+        data.auth = null
+    }
 }
 
 def isLoggedIn() {

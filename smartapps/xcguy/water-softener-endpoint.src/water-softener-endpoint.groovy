@@ -46,11 +46,22 @@ mappings {
 }
 
 def installed() {
+	createAccessToken()
+	getToken()
+    
+    log.debug("Installed with settings: $sensors.name")
+	log.debug("Installed with rest api: $app.id")
+    log.debug("Installed with token: $state.accessToken")
+
 	subscribe(sensors, "lowSaltFlag", saltLevelWarning)
 }
 
 def updated() {
 	unsubscribe()
+    
+    log.debug("Updated with rest api: $app.id")
+    log.debug("Updated with token: $state.accessToken")
+    
     subscribe(sensors, "lowSaltFlag", saltLevelWarning)
 }
 
@@ -70,7 +81,7 @@ void updateSensor() {
 def deviceHandler(evt) {}
 
 private void update(devices) {
-	// log.debug "update, request: params: ${params}, devices: $devices.id"   
+	log.debug "update, request: params: ${params}, devices: $devices.id"   
     
     def command = params.command
     def val = params.val as int
@@ -80,7 +91,7 @@ private void update(devices) {
 		if (!device) {
 			httpError(404, "Device not found")
 		} else {
-            // log.debug "Previous saltlevel: "+device.currentState("saltlevel")
+            log.debug "Previous saltlevel: "+device.currentState("saltlevel")
             device.updateSaltLevel(val)
 		}
 	}
@@ -144,3 +155,14 @@ def sendWarningMessage(sensor)
     }
 }
 
+def getToken(){
+if (!state.accessToken) {
+		try {
+			getAccessToken()
+			log.debug("Creating new Access Token: $state.accessToken")
+		} catch (ex) {
+			log.debug("Ensure OAuth is enabled in SmartApp IDE settings")
+            log.debug(ex)
+		}
+	}
+}

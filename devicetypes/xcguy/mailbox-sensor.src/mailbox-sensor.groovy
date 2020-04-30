@@ -19,7 +19,7 @@
 metadata {
 	definition (name: "Mailbox Sensor", namespace: "xcguy", author: "Bruce Adelsman") {
 		capability "Contact Sensor"
-		capability "Sensor"
+		capability "Presence Sensor"
 		capability "Battery"
 		capability "Configuration"
 
@@ -103,11 +103,13 @@ def parse(String description) {
 def setFull() {
 	log.debug "Mailbox set to full"
 	sendEvent(name: "mailbox", value: "full")
+    sendEvent(name: 'presence', value: 'present')
 }
 
 def setEmpty() {
 	log.debug "Mailbox emptied"
 	sendEvent(name: "mailbox", value: "empty")
+	sendEvent(name: 'presence', value: 'not present')
 }
 
 def reset() {

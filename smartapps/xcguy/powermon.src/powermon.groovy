@@ -45,11 +45,13 @@ preferences {
 
 def installed() {
   subscribe(powerMeter, "power", powerHandler)
+  subscribe(powerMeter, "switch", powerHandler)
 }
 
 def updated() {
 	unsubscribe()
     subscribe(powerMeter, "power", powerHandler)
+	subscribe(powerMeter, "switch", powerHandler)
 }
 
 def isPowerActive(level) {
@@ -64,15 +66,26 @@ def getInactivityDelayMins() {
 	return (inactivityDelay == null ? 0 : inactivityDelay as int)
 }
 
+def isSwitchOn() {
+	return powerMeter.currentValue("switch") != "off"
+}
 
 def powerHandler(evt) {
   def activityState = activitySensor.currentValue("presence")
-  def meterValue = evt == null ? powerMeter.currentValue("power") as int : evt.value as int
-
+  def meterValue = 0
+  if (evt) {
+	if (evt.value.isNumber() && isSwitchOn()) {
+    	meterValue = (int) Double.parseDouble(evt.value)
+    } else if (evt.value == "off") {
+    	log.debug "${powerMeter} turned off"
+  	} else if (evt.value == "on") {
+    	log.debug "${powerMeter} turned on"
+    }
+  }
   log.debug "PowerMon - handler - power: ${meterValue}, presence: ${activityState}"
   if (isPowerActive(meterValue)) {
   	log.debug "PowerMon - power active"
-  	if (activityState == "not present") {
+  	if (activityState != "present") {
     	log.debug "${powerMeter} reported energy consumption above ${powerActive}. Turning on presence for ${activitySensor}."
     	activitySensor.active()
         if (powerOn)

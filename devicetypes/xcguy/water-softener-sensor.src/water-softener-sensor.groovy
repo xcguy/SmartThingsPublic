@@ -2,6 +2,7 @@ metadata {
 	definition (name: "Water Softener Sensor", namespace: "xcguy", author: "Bruce Adelsman", oauth: true) {
 		capability "Sensor"
         capability "Actuator"
+        capability "Relative Humidity Measurement"
         
         attribute "lowSaltFlag", "enum", [ "On, Off" ]
         attribute "saltLevel", "number"
@@ -26,7 +27,7 @@ metadata {
 	// UI tile definitions
 	tiles {
 		valueTile("saltLevel", "device.saltLevel", width: 2, height: 2) {
-			state("default", label:'${currentValue}%', 
+			state("default", label:'${currentValue}%', icon: "st.Outdoor.outdoor16",
             	backgroundColors:[
 					[value: 10, color: "#FF0000"],
 					[value: 30, color: "#FF9933"],
@@ -38,9 +39,13 @@ metadata {
 			)
  
 		}
+        standardTile("lowSaltFlag", "device.lowSaltFlag", width: 1, height: 1) {
+    		state "Off", icon: "st.Weather.weather2", backgroundColor: "#ffffff"
+   			state "On", icon: "st.Weather.weather2", backgroundColor: "#dc7900"
+		}
 
 		main("saltLevel")
-		details("saltLevel")
+		details("saltLevel", "lowSaltFlag")
 	}
 }
 
@@ -58,9 +63,12 @@ def parse(String description) {
 
 def updateSaltLevel(value) {
 	log.debug "updateSaltLevel ${value}"
-    if (value != null) {
+    log.debug  "lowSaltLevel ${lowSaltLevel}"
+    log.debug "lowSaltFlag ${device.currentValue("lowSaltFlag")}"
+    if (value) {
 		sendEvent(name: "saltLevel", value: value)
-    	if ((value as int) <= (device.currentValue("lowSaltLevel") as int)) {
+        sendEvent(name: "humidity", value: value)
+    	if (value <= lowSaltLevel) {
 	    	if (!(device.currentValue("lowSaltFlag") == "On")) {
     			log.debug "setting low salt flag to on"
    				sendEvent(name: "lowSaltFlag", value: "On")
